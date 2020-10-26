@@ -1,0 +1,11 @@
+fileFormatVersion: 2
+guid: 6fd4a7c656a2f3a458801ec5c688c199
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _MainTex: {instanceID: 0}
+  - _ClipMaskTex: {fileID: 2800000, guid: e80c3c84ea861404d8a427db8b7abf04, type: 3}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

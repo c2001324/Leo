@@ -1,0 +1,21 @@
+
+[
+    {
+        "name":"UIConsoleWnd",
+        "prefab":"UI/UIConsoleWnd",
+        "layer":-100,
+        "hasMessage":true
+    },
+    {
+        "name":"UILoadingGameWnd",
+        "prefab":"UI/UILoadingGameWnd",
+        "layer":0,
+        "hasMessage":true
+    },
+    {
+        "name":"UITitleWnd",
+        "prefab":"UI/UITitleWnd",
+        "layer":1,
+        "hasMessage":true
+    }
+]

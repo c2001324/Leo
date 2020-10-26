@@ -1,0 +1,8 @@
+{
+	"test_entity":
+    {
+		"type":"ETrap",
+		"name":"测试使用的Entity",
+		"entityModel":"EntityModels/DefaultEntityModel"
+	}
+}

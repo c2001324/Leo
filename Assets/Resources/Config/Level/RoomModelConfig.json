@@ -1,0 +1,12 @@
+{
+    "practicle":
+    {
+        "isDirectory":false,
+        "path":"Practicle/Practicle"
+    },
+    "level_1_monster":
+    {
+        "isDirectory":true,
+        "path":"Level_1/Monster"
+    }
+}
