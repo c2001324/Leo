@@ -17,7 +17,8 @@ public enum DamageMark
     ForbidMinDamageLimit = 1 << 6,          //最小的伤害值限制
     ForbidDodge = 1 << 7,                           //不能被闪避，必中
     ForbidBreakSpelling = 1 << 8,               //不会打断持续施法
-                                                //此处标记使用强制修改伤害，优先级从高到低
+    DisabledBlockDamage = 1 << 9,
+
     ForceUndead = 1 << 20,                          // 不会死亡，优先级高于 ForceKill
     ForceKill = 1 << 21,                                //强制击杀
 }
@@ -26,11 +27,13 @@ public enum DamageMark
 /// 伤害的行为标记，标记了伤害已经进行了哪种操作
 /// </summary>
 [Flags]
-public enum DamageActionMark
+public enum DamageResultMark
 {
     None = 0,
     ResistDamage = 1 << 0,  //伤害已经计算了抗性
     GainDamage = 1 << 1,  //伤害已被加深
     ShieldDamage = 1 << 2,  //已要护盾格档了
     Crit = 1 << 3,              //已暴击
+    BlockDamageSuccess = 1 << 4,   //已格档了伤害
+    BlockDamageFailed = 1 << 5,   //已格档了伤害
 }

@@ -15,8 +15,8 @@ public class EntityManager : Singleton<EntityManager>, ISimpleInitManager
     public void Initialize()
     {
         m_EntityConfig.Clear();
-
-        
+        var e = LoadJsonObject.CreateObjectFromResource<Dictionary<string, JEntityConfig>>("Config/Entity/PlayerConfig");
+        CopyConfig(e.Keys.GetEnumerator(), e.Values.GetEnumerator());
     }
 
     void CopyConfig(IEnumerator<string> keys, IEnumerator<JEntityConfig> values)
@@ -43,12 +43,12 @@ public class EntityManager : Singleton<EntityManager>, ISimpleInitManager
 
     #region 创建 Entity
 
-    public T Create<T>(string keyName, Map map, Hexagon cell, BaseParams param) where T : Entity
+    public T Create<T>(string keyName, RoomInstance room, HexCell cell, BaseParams param) where T : Entity
     {
-        return Create(keyName, map, cell, param) as T;
+        return Create(keyName, room, cell, param) as T;
     }
 
-    public Entity Create(string keyName, Map map, Hexagon cell, BaseParams param)
+    public Entity Create(string keyName, RoomInstance room, HexCell cell, BaseParams param)
     {
         JEntityConfig config = GetEntityConfig(keyName);
         if (config == null)
@@ -71,7 +71,7 @@ public class EntityManager : Singleton<EntityManager>, ISimpleInitManager
             return null;
         }
 
-        HexagonsWithCenter cells = map.FindClearCellsInRange(config.size, cell, -1);
+        HexagonsWithCenter cells = room.hexRoom.FindClearCellsInRange(config.size, cell, -1);
         if (cells == null)
         {
             Debug.LogError("找不到出生点！对象" + keyName);
@@ -89,7 +89,8 @@ public class EntityManager : Singleton<EntityManager>, ISimpleInitManager
         if (entity != null)
         {
             m_EntityDict.Add(entity.oid, entity);
-            entity.Born();
+            room.AddEntity(entity);
+            entity.Born(cells);
         }
         return entity;
     }

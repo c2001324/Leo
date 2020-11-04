@@ -82,8 +82,8 @@ public class UIWindow : MonoBehaviour
             m_CanvasGroup = gameObject.AddComponent<CanvasGroup>();
             m_CanvasGroup.alpha = 0;
         }
-        
-        m_Panel.raycastTarget = false;
+
+        m_Panel.raycastTarget = m_Config.hasMessage;
         if (!_initialize())
         {
             Destroy(this);

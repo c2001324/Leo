@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using UnityEngine;
 using Untility;
 
 /// <summary>
@@ -35,7 +34,17 @@ public class GameSceneManager : Singleton<GameSceneManager>, IDonotInitManager
         }
     }
 
-    public GameSceneType curGameScene { get { return m_CurGameScene.type; } }
+    public GameSceneType curGameScene
+    {
+        get
+        {
+            if (m_CurGameScene == null)
+            {
+                return GameSceneType.ExitGame;
+            }
+            return m_CurGameScene.type;
+        }
+    }
 
     GameScene m_OldGameScene;
 
@@ -51,36 +60,37 @@ public class GameSceneManager : Singleton<GameSceneManager>, IDonotInitManager
     }
     public State state { get; private set; }
 
-    public void EnterGameScene(GameSceneType nextScene)
+    public void EnterGameScene(GameSceneType nextScene, GameSceneParam param = null)
     {
-        EnterGameScene(GetGameScene(nextScene));
+        EnterGameScene(GetGameScene(nextScene), param);
     }
 
-    public void EnterGameScene(GameScene nextScene)
+    void EnterGameScene(GameScene nextScene, GameSceneParam param)
     {
         if (state == State.Done)
         {
             state = State.ExitGameScene;
             m_NextGameScene = nextScene;
-            GameEvent.Scene.FireOnBeginExitScene(m_CurGameScene.type);
-            m_CurGameScene.ExitScene();
+            GameEvent.SceneEvent.FireOnBeginExitScene(m_CurGameScene.type);
+            m_CurGameScene.ExitScene(param);
         }
     }
 
-    void OnEnterComplete(GameScene gameScene)
+    void OnEnterComplete(GameScene gameScene, GameSceneParam param)
     {
+        m_OldGameScene = m_CurGameScene;
         m_CurGameScene = m_NextGameScene;
-        GameEvent.Scene.FireOnEnterSceneComplete(gameScene.type);
-        state = State.Done;
         m_NextGameScene = null;
+        GameEvent.SceneEvent.FireOnEnterSceneComplete(gameScene.type);
+        state = State.Done;   
     }
 
-    void OnExitComplete(GameScene gameScene)
+    void OnExitComplete(GameScene gameScene, GameSceneParam param)
     {
         state = State.EnterGameScene;
-        GameEvent.Scene.FireOnExitSceneComplete(m_CurGameScene.type);
-        GameEvent.Scene.FireOnBeginEnterScene(m_NextGameScene.type);
-        m_NextGameScene.EnterScene();
+        GameEvent.SceneEvent.FireOnExitSceneComplete(m_CurGameScene.type);
+        GameEvent.SceneEvent.FireOnBeginEnterScene(m_NextGameScene.type);
+        m_NextGameScene.EnterScene(param);
     }
 
 

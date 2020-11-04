@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HexMap;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -39,7 +40,7 @@ public class RoomInstance : MonoBehaviour
 
     RoomScriptBase m_Script;
 
-    RoomModel m_RoomModel;
+    public HexRoom hexRoom { get; private set; }
 
     public JRoomContentConfig contentConfig { get; private set; }
 
@@ -77,28 +78,58 @@ public class RoomInstance : MonoBehaviour
         return true;
     }
 
-    public IEnumerator DestroyRoom(AreaInstance area)
+    /// <summary>
+    /// 只能由Area调用
+    /// </summary>
+    /// <param name="position"></param>
+    /// <returns></returns>
+    public IEnumerator BuildRoom(AreaInstance area)
     {
-        Debug.LogError("DestroyRoom");
-        if (!isEnterRoom)
+        GameEvent.RoomEvent.FireOnBeginBuildRoom(this);
+        yield return LoadRoomModel();
+        GameEvent.RoomEvent.FireOnBuildRoomComplete(this);
+    }
+
+    /// <summary>
+    /// 只能由Area调用
+    /// </summary>
+    /// <returns></returns>
+    public IEnumerator DestroyRoom(AreaInstance area, ExitRoomType type)
+    {
+        if (isEnterRoom)
         {
-            yield return UnloadContent();
-            m_Data = null;
-            area = null;
+            Debug.LogError("区域还没有退出，不能直接销毁");
         }
-        else
-        {
-            Debug.LogError("需要先退出房间");
-        }
-        
-        if (m_Script != null)
-        {
-            m_Script.Destroy();
-            m_Script = null;
-        }
-        m_RoomModel = null;
+        GameEvent.RoomEvent.FireOnBeginDestroyRoom(this);
+        yield return null;
+        GameEvent.RoomEvent.FireOnDestroyRoomComplete(this);
+        m_Data = null;
+        area = null;
+        m_Script = null;
+        hexRoom = null;
         DestroyImmediate(gameObject);
     }
+
+    /// <summary>
+    /// 加载资源
+    /// </summary>
+    /// <param name="astarPath"></param>
+    /// <returns></returns>
+    IEnumerator LoadRoomModel()
+    {
+        if (m_Script != null && !m_Script.isInitialize)
+        {
+            //加载模型
+            HexGeneratorcs generator = new HexGeneratorcs();
+            GameObject movablePrefab = Resources.Load<GameObject>("HexTest/Hex0");
+            GameObject[] heightPrefab = new GameObject[2];
+            heightPrefab[0] = Resources.Load<GameObject>("HexTest/Hex1");
+            heightPrefab[1] = Resources.Load<GameObject>("HexTest/Hex2");
+            yield return generator.GenerateGrid(15, 15, transform, movablePrefab, heightPrefab);
+            hexRoom = new HexRoom(generator.result.Cells);
+        }
+    }
+
     #endregion
 
     private void Update()
@@ -110,85 +141,46 @@ public class RoomInstance : MonoBehaviour
     }
 
 
-    #region 加载和卸载Content
-
-    /// <summary>
-    /// 加载资源
-    /// </summary>
-    /// <param name="astarPath"></param>
-    /// <returns></returns>
-    public IEnumerator LoadContent()
-    {
-        if (m_Script != null && !m_Script.isInitialize)
-        {
-            //加载资源
-            yield return m_Script.LoadContent(m_RoomModel);
-        }
-    }
-
-    IEnumerator UnloadContent()
-    {
-        if (m_Script != null)
-        {
-            yield return m_Script.UnloadContent();
-        }
-        else
-        {
-            yield return 1f;
-        }
-    }
-
-    #endregion
-
     #region 进出入
-    /// <summary>
-    /// 只能由Area调用
-    /// </summary>
-    /// <returns></returns>
-    public IEnumerator Enter(AreaInstance area)
-    {
-        yield return Enter(area, m_RoomModel.beginPoint);
-    }
-
-    /// <summary>
-    /// 只能由Area调用
-    /// </summary>
-    /// <param name="position"></param>
-    /// <returns></returns>
-    public IEnumerator Enter(AreaInstance area, Vector3 position)
+    
+    public IEnumerator Enter()
     {
         if (!isEnterRoom)
         {
-            GameEvent.Room.FireOnBeforeEnterRoom(this);
+            GameEvent.RoomEvent.FireOnBeforeEnterRoom(this);
             isEnterRoom = true;
-            //位移进入房间的位置
             if (m_Script != null)
             {
+                yield return m_Script.LoadContent(hexRoom);
                 m_Script.EnterRoom();
             }
             yield return null;
-            GameEvent.Room.FireOnEnterRoom(this);
+            TurnBaseManager.instance.CombatStart();
+            GameEvent.RoomEvent.FireOnEnterRoom(this);
         }
     }
 
-    /// <summary>
-    /// 只能由Area调用
-    /// </summary>
-    /// <returns></returns>
-    public IEnumerator Exit(AreaInstance area)
+    public IEnumerator Exit(ExitRoomType type)
     {
         if (isEnterRoom)
         {
+            GameEvent.RoomEvent.FireOnBeforeExitRoom(this, type);
             isEnterRoom = false;
-            GameEvent.Room.FireOnBeforeExitRoom(this);
             if (m_Script != null)
             {
+                yield return m_Script.UnloadContent();
                 m_Script.ExitRoom();
             }
+            if (type == ExitRoomType.ExitRoom)
+            {
+                PlayerManager.instance.DestoryPlayer();
+            }
             yield return null;
-            GameEvent.Room.FireOnExitRoom(this);
+            GameEvent.RoomEvent.FireOnExitRoom(this, type);
         }
     }
+
+    
 
     /// <summary>
     /// 完成房间
@@ -198,7 +190,7 @@ public class RoomInstance : MonoBehaviour
         if (!isComplete)
         {
             isComplete = true;
-            GameEvent.Room.FireOnCompleteRoom(this);
+            GameEvent.RoomEvent.FireOnCompleteRoom(this);
             onRoomComplete.Invoke();
         }
     }

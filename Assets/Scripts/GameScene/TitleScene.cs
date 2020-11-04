@@ -1,20 +1,16 @@
-﻿using UnityEngine;
-using UnityEditor;
-using System;
-
-public class TitleScene : GameScene
+﻿public class TitleScene : GameScene
 {
     public override GameSceneType type { get { return GameSceneType.Title; } }
 
-    public override void EnterScene()
+    protected override void OnEnterScene(GameSceneParam param)
     {
         UIManager.instance.OpenUI<UITitleWnd>(false);
-        EnterComplete();
+        EnterComplete(null);
     }
 
-    public override void ExitScene()
+    protected override void OnExitScene(GameSceneParam param)
     {
         UIManager.instance.CloseUI<UITitleWnd>();
-        ExitComplete();
+        ExitComplete(null);
     }
 }

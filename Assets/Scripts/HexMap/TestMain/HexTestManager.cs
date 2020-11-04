@@ -1,5 +1,5 @@
-﻿using UnityEngine;
-using UnityEditor;
+﻿using System.Collections;
+using UnityEngine;
 
 namespace HexMap
 {
@@ -20,10 +20,18 @@ namespace HexMap
         {
             if (!m_PressKey && Input.GetKeyUp(KeyCode.Space))
             {
-                HexGeneratorcs generator = new HexGeneratorcs();
-                GridInfo info = generator.GenerateGrid(10, 10, transform, movablePrefab, heightPrefab);
-                Map map = new Map(info.Cells);
+                StartCoroutine(GeneratorMap());   
             }
         }
+
+        IEnumerator GeneratorMap()
+        {
+            HexGeneratorcs generator = new HexGeneratorcs();
+            GameObject obj = new GameObject();
+            obj.transform.parent = transform;
+            yield return generator.GenerateGrid(15, 15, obj.transform, movablePrefab, heightPrefab);
+            HexRoom map = new HexRoom(generator.result.Cells);
+        }
+
     }
 }

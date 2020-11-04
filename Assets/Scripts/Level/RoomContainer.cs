@@ -22,8 +22,6 @@ public class RoomContainer : MonoBehaviour
             instance = obj.AddComponent<RoomContainer>();
             DontDestroyOnLoad(instance);
         }
-        GameEvent.Area.onDestroyAreaComplete.AddListener(instance.OnDestroyArea);
-        GameEvent.Area.onBuildArea.AddListener(instance.OnCreateArea);
     }
 
     Dictionary<int, Transform> m_RoomList = new Dictionary<int, Transform>();
@@ -33,7 +31,7 @@ public class RoomContainer : MonoBehaviour
         name = level.levelName + "( " + area.index + ")";
     }
 
-    void OnDestroyArea(LevelInstance level, AreaInstance area, DestroyLevelType type)
+    void OnDestroyArea(LevelInstance level, AreaInstance area, ExitLevelType type)
     {
         while (transform.childCount > 0)
         {

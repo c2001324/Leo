@@ -33,18 +33,30 @@ public class AreaInstance : MonoBehaviour
 
     AreaData m_AreaData;
 
-    public RoomInstance room;
+
+    public RoomInstance curRoom { get; private set; }
 
     public LevelInstance level { get; private set; }
 
     public Vector2 size { get; private set; }
 
-    List<RoomInstance> m_Rooms = new List<RoomInstance>();
-
-
     public bool isEnterArea { get; private set; }
 
-    #region 初始化和销毁
+    List<RoomInstance> m_Rooms = new List<RoomInstance>();
+
+    public RoomInstance GetRoomInstance(int index)
+    {
+        foreach (RoomInstance room in m_Rooms)
+        {
+            if (room.index == index)
+            {
+                return room;
+            }
+        }
+        return null;
+    }
+
+    #region 区域初始化和销毁
     public bool Initialize(LevelInstance level, AreaData data)
     {
         this.level = level;
@@ -54,145 +66,136 @@ public class AreaInstance : MonoBehaviour
     }
 
     /// <summary>
-    /// 销毁区域
+    /// 只能由Level调用
     /// </summary>
-    /// <returns></returns>
-    public IEnumerator DestroyArea(LevelInstance level, DestroyLevelType type)
+    public IEnumerator BuildArea()
     {
-        if (!isEnterArea)
-        {
-            foreach (RoomInstance room in m_Rooms)
-            {
-                yield return DestroyRoom(room, false);
-            }
-            m_Rooms.Clear();
-            level = null;
-            m_AreaData = null;
-            DestroyImmediate(gameObject);
-        }
-        else
-        {
-            Debug.LogError("需要先退出房间");
-        }
+        GameEvent.AreaEvent.FireOnBeginBuildArea(level, this);
+        yield return DoBuildRoom(GetDefaultRoomData());
+        GameEvent.AreaEvent.FireOnBuildAreaComplete(level, this);
     }
 
     /// <summary>
     /// 只能由Level调用
     /// </summary>
-    public IEnumerator EnterArea(LevelInstance level)
+    public IEnumerator DestroyArea(LevelInstance level, ExitAreaType type)
     {
-        if (!isEnterArea)
+        if (isEnterArea)
         {
-            isEnterArea = true;
-            GameEvent.Area.FireOnBeforeEnterArea(level, this);
-            RoomInstance room = GetRoom(GetDefaultRoomData().index);
-            yield return EnterRoom(room);
-            GameEvent.Area.FireOnEnterArea(level, this);
+            Debug.LogError("区域还没有退出，不能直接销毁");
         }
-    }
-
-    /// <summary>
-    /// 只能由Level调用
-    /// </summary>
-    public IEnumerator ExitArea(LevelInstance level, DestroyLevelType type)
-    {
-        if (isEnterArea && room != null)
+        GameEvent.AreaEvent.FireOnBeginDestroyArea(level, this, type);
+        foreach (RoomInstance room in new List<RoomInstance>(m_Rooms))
         {
-            isEnterArea = false;
-            GameEvent.Area.FireOnBeforeExitArea(level, this, type);
-            yield return ExitRoom();
-            GameEvent.Area.FireOnExitArea(level, this, type);
+            yield return DestroyRoom(room, type);
         }
+        GameEvent.AreaEvent.FireOnDestroyAreaComplete(level, this, type);
+        level = null;
+        m_AreaData = null;
+        DestroyImmediate(gameObject);
     }
 
     #endregion
 
-    #region 进出入
+    #region 区域进出入
+    public IEnumerator EnterArea()
+    {
+        if (!isEnterArea)
+        {
+            isEnterArea = true;
+            GameEvent.AreaEvent.FireOnBeforeEnterArea(level, this);
+            RoomInstance room = GetRoomInstance(GetDefaultRoomData().index);
+            yield return EnterRoom(room);
+            GameEvent.AreaEvent.FireOnEnterArea(level, this);
+        }
+    }
 
+    public IEnumerator ExitArea(ExitAreaType type)
+    {
+        if (isEnterArea)
+        {
+            isEnterArea = false;
+            GameEvent.AreaEvent.FireOnBeforeExitArea(level, this, type);
+            switch (type)
+            {
+                case ExitAreaType.EnterNextArea:
+                    yield return EixtRoom(ExitRoomType.EnterNextRoom);
+                    break;
+                case ExitAreaType.ExitArea:
+                    yield return EixtRoom(ExitRoomType.ExitRoom);
+                    break;
+            }
+            GameEvent.AreaEvent.FireOnExitArea(level, this, type);
+        }
+    }
+    #endregion
 
+    #region 房间创建和销毁
+    public void BuildRoom(RoomData roomData)
+    {
+        StartCoroutine(DoBuildRoom(roomData));
+    }
 
     /// <summary>
     /// 调用房间
     /// </summary>
     /// <param name="targetRoom"></param>
     /// <returns></returns>
-    public IEnumerator EnterRoom(RoomInstance targetRoom)
+    public IEnumerator DoBuildRoom(RoomData roomData)
     {
-        if (targetRoom != null && targetRoom != room)
+        if (GetRoomInstance(roomData.index) != null)
         {
-            yield return ExitRoom();
-            room = targetRoom;
-            yield return targetRoom.Enter(this);
-        }
-    }
-
-    public IEnumerator ExitRoom()
-    {
-        if (room != null)
-        {
-            yield return room.Exit(this);
-            room = null;
-        }
-    }
-
-    #endregion
-
-
-    #region 加载房间
-
-    public IEnumerator BuildRoom(RoomData roomData)
-    {
-        if (roomData != null)
-        {
-            //加载实例
-            RoomInstance room = RoomInstance.Create(this, roomData);
-            //加载资源
-            yield return room.LoadContent();
-
-            m_Rooms.Add(room);
-        }
-    }
-
-    /// <summary>
-    /// 卸载房间实例
-    /// </summary>
-    /// <param name="room"></param>
-    /// <returns></returns>
-    public IEnumerator DestroyRoom(RoomInstance room, bool remove)
-    {
-        yield return room.DestroyRoom(this);
-        if (remove)
-        {
-            m_Rooms.Remove(room);
-        }
-    }
-    #endregion
-
-    public RoomInstance GetRoom(int index)
-    {
-        foreach (RoomInstance room in m_Rooms)
-        {
-            if (room.index == index)
-            {
-                return room;
-            }
-        }
-        Debug.LogError("index = " + index + " 还没有build");
-        return null;
-    }
-
-    public RoomInstance GetDefaultRoom()
-    {
-        RoomData roomData = GetDefaultRoomData();
-        if (roomData != null)
-        {
-            return GetRoom(roomData.index);
+            Debug.LogError("房间 " + roomData.index + " 已经创建了");
         }
         else
         {
-            return null;
+            RoomInstance room = RoomInstance.Create(this, roomData);
+            m_Rooms.Add(room);
+            yield return room.BuildRoom(this);
         }
     }
+
+    public IEnumerator DestroyRoom(RoomInstance room, ExitRoomType type)
+    {
+        if (room != null && m_Rooms.Remove(room))
+        {
+            yield return room.DestroyRoom(this, type);
+        }
+    }
+
+    public IEnumerator DestroyRoom(RoomInstance room, ExitAreaType type)
+    {
+        switch (type)
+        {
+            case ExitAreaType.EnterNextArea:
+                yield return DestroyRoom(room, ExitRoomType.EnterNextRoom);
+                break;
+            case ExitAreaType.ExitArea:
+                yield return DestroyRoom(room, ExitRoomType.ExitRoom);
+                break;
+        }
+    }
+    #endregion
+
+    #region 房间进出入
+    public IEnumerator EnterRoom(RoomInstance room)
+    {
+        if (curRoom != null)
+        {
+            yield return EixtRoom(ExitRoomType.EnterNextRoom);
+        }
+        curRoom = room;
+        yield return curRoom.Enter();
+    }
+
+    public IEnumerator EixtRoom(ExitRoomType type)
+    {
+        yield return curRoom.Exit(type);
+        curRoom = null;
+    }
+
+    #endregion
+
 
     public RoomData GetRoomData(RoomType roomType)
     {

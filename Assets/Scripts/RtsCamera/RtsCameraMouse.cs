@@ -7,6 +7,7 @@ using UnityEngine;
 public class RtsCameraMouse : MonoBehaviour
 {
     public KeyCode MouseOrbitButton;
+    public KeyCode MousePanButton;
 
     public bool AllowScreenEdgeMove;
     public bool ScreenEdgeMoveBreaksFollow;
@@ -29,18 +30,14 @@ public class RtsCameraMouse : MonoBehaviour
     public string RotateInputAxis = "Mouse X";
     public string TiltInputAxis = "Mouse Y";
     public string ZoomInputAxis = "Mouse ScrollWheel";
-    public KeyCode PanKey1 = KeyCode.LeftShift;
-    public KeyCode PanKey2 = KeyCode.RightShift;
 
-    //
 
     private RtsCamera _rtsCamera;
 
-    //
-
     protected void Reset()
     {
-        MouseOrbitButton = KeyCode.Mouse2;    // middle mouse by default (probably should not use right mouse since it doesn't work well in browsers)
+        MouseOrbitButton = KeyCode.Mouse1;    // middle mouse by default (probably should not use right mouse since it doesn't work well in browsers)
+        MousePanButton = KeyCode.Mouse2;
 
         AllowScreenEdgeMove = true;
         ScreenEdgeMoveBreaksFollow = true;
@@ -50,8 +47,6 @@ public class RtsCameraMouse : MonoBehaviour
         AllowPan = true;
         PanBreaksFollow = true;
         PanSpeed = 50f;
-        PanKey1 = KeyCode.LeftShift;
-        PanKey2 = KeyCode.RightShift;
 
         AllowRotate = true;
         RotateSpeed = 360f;
@@ -83,36 +78,31 @@ public class RtsCameraMouse : MonoBehaviour
             _rtsCamera.Distance -= scroll * ZoomSpeed * Time.deltaTime;
         }
 
-        if (Input.GetKey(MouseOrbitButton))
+        if (Input.GetKey(MousePanButton) && AllowPan)
         {
-            if (AllowPan && (Input.GetKey(PanKey1) || Input.GetKey(PanKey2)))
+            // pan
+            var panX = -1 * Input.GetAxisRaw("Mouse X") * PanSpeed * Time.deltaTime;
+            var panZ = -1 * Input.GetAxisRaw("Mouse Y") * PanSpeed * Time.deltaTime;
+
+            _rtsCamera.AddToPosition(panX, 0, panZ);
+
+            if (PanBreaksFollow && (Mathf.Abs(panX) > 0.001f || Mathf.Abs(panZ) > 0.001f))
             {
-                // pan
-                var panX = -1 * Input.GetAxisRaw("Mouse X") * PanSpeed * Time.deltaTime;
-                var panZ = -1 * Input.GetAxisRaw("Mouse Y") * PanSpeed * Time.deltaTime;
-
-                _rtsCamera.AddToPosition(panX, 0, panZ);
-
-                if (PanBreaksFollow && (Mathf.Abs(panX) > 0.001f || Mathf.Abs(panZ) > 0.001f))
-                {
-                    _rtsCamera.EndFollow();
-                }
+                _rtsCamera.EndFollow();
             }
-            else
+        }
+        else if (Input.GetKey(MouseOrbitButton))
+        {
+            if (AllowTilt)
             {
-                // orbit
+                var tilt = Input.GetAxisRaw(TiltInputAxis);
+                _rtsCamera.Tilt -= tilt * TiltSpeed * Time.deltaTime;
+            }
 
-                if (AllowTilt)
-                {
-                    var tilt = Input.GetAxisRaw(TiltInputAxis);
-                    _rtsCamera.Tilt -= tilt * TiltSpeed * Time.deltaTime;
-                }
-
-                if (AllowRotate)
-                {
-                    var rot = Input.GetAxisRaw(RotateInputAxis);
-                    _rtsCamera.Rotation += rot * RotateSpeed * Time.deltaTime;
-                }
+            if (AllowRotate)
+            {
+                var rot = Input.GetAxisRaw(RotateInputAxis);
+                _rtsCamera.Rotation += rot * RotateSpeed * Time.deltaTime;
             }
         }
 

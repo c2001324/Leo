@@ -1,0 +1,25 @@
+{
+    "name":"练习关卡",
+    "levelType":"Practice",
+    "areas":
+    [
+        {
+            "name":"区域一",
+            "deep":
+            {
+                "min":1,
+                "max":1
+            },
+            "roomConfigs":
+            [
+                {
+                    "roomConfig":
+                    {
+                        "roomType":"PracticeRoom",
+                        "content":"default_Practicle"
+                    }
+                }
+            ]
+        }
+    ]
+}

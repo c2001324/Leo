@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using HexMap;
 
 /// <summary>
 /// 房间的脚本
@@ -40,7 +41,7 @@ public class RoomScriptBase
     //房间资源
     public JRoomContentConfig contentConfig { get; private set; }
     //房间模型
-    public RoomModel model { get; private set; }
+    public HexRoom model { get; private set; }
 
     //是否正在加载批次
     public bool isLoadingBath { get; private set; }
@@ -63,14 +64,8 @@ public class RoomScriptBase
 
     protected virtual void OnInitialize(RoomInstance room, JRoomContentConfig contentConfig) { }
 
-    protected virtual void OnDestroy() { }
 
-    public void Destroy()
-    {
-        OnDestroy();
-    }
-
-    public IEnumerator LoadContent(RoomModel model)
+    public IEnumerator LoadContent(HexRoom model)
     {
         if (!isInitialize)
         {
@@ -78,10 +73,6 @@ public class RoomScriptBase
             if (Config.system.loadContent)
             {
                 //加载默认的Entity
-                foreach (RoomModelEntity.EntityData data in model.entities)
-                {
-                    yield return null;
-                }
                 //预加载的资源
                 yield return LoadBatchContent(0, 0, 0, false);
                 //载自定义的资源
@@ -282,16 +273,7 @@ public class RoomScriptBase
 
     IEnumerator LoadBatchContentBySpawnPoint(JRoomContentConfig.JBatchContentElement e, float interval, bool spawnEffect)
     {
-        string spawnPointName = e.GetSpawnPoint(room.random);
-        RoomModelSpawnPoint.SpawnPointData spawnPoint = model.GetSpawnPoint(spawnPointName, room.random);
-        if (spawnPoint == null && spawnPointName != null && spawnPointName != "")
-        {
-            Debug.LogError(contentConfig.name + " 在找不到出生点 " + spawnPointName);
-        }
-        else
-        {
-            yield return null;
-        }
+        yield return null;
     }
     #endregion
 }

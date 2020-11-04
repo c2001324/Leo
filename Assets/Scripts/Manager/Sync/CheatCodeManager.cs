@@ -58,7 +58,7 @@ public class CheatCodeManager : Singleton<CheatCodeManager>, ISyncInitManager
         #endregion
         //加载初始的配置文件
 #if UNITY_EDITOR
-        GameEvent.Scene.onEnterSceneComplete.AddListener(OnEnterGameScene);
+        GameEvent.SceneEvent.onEnterSceneComplete.AddListener(OnEnterGameScene);
         LoadCheatCodeConfig();
         yield return new ManagerProgress(1f, "");
 #endif

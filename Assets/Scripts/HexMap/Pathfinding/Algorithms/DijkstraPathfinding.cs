@@ -6,14 +6,14 @@ namespace HexMap
     /// </summary>
     class DijkstraPathfinding : IPathfinding
     {
-        public Dictionary<Hexagon, List<Hexagon>> findAllPaths(Dictionary<Hexagon, Dictionary<Hexagon, float>> edges, Hexagon originNode)
+        public Dictionary<HexCell, List<HexCell>> findAllPaths(Dictionary<HexCell, Dictionary<HexCell, float>> edges, HexCell originNode)
         {
-            IPriorityQueue<Hexagon> frontier = new HeapPriorityQueue<Hexagon>();
+            IPriorityQueue<HexCell> frontier = new HeapPriorityQueue<HexCell>();
             frontier.Enqueue(originNode, 0);
 
-            Dictionary<Hexagon, Hexagon> cameFrom = new Dictionary<Hexagon, Hexagon>();
-            cameFrom.Add(originNode, default(Hexagon));
-            Dictionary<Hexagon, float> costSoFar = new Dictionary<Hexagon, float>();
+            Dictionary<HexCell, HexCell> cameFrom = new Dictionary<HexCell, HexCell>();
+            cameFrom.Add(originNode, default(HexCell));
+            Dictionary<HexCell, float> costSoFar = new Dictionary<HexCell, float>();
             costSoFar.Add(originNode, 0);
 
             while (frontier.Count != 0)
@@ -32,10 +32,10 @@ namespace HexMap
                 }
             }
 
-            Dictionary<Hexagon, List<Hexagon>> paths = new Dictionary<Hexagon, List<Hexagon>>();
-            foreach (Hexagon destination in cameFrom.Keys)
+            Dictionary<HexCell, List<HexCell>> paths = new Dictionary<HexCell, List<HexCell>>();
+            foreach (HexCell destination in cameFrom.Keys)
             {
-                List<Hexagon> path = new List<Hexagon>();
+                List<HexCell> path = new List<HexCell>();
                 var current = destination;
                 while (!current.Equals(originNode))
                 {

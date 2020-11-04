@@ -5,13 +5,13 @@ public class ExitGameScene : GameScene
 {
     public override GameSceneType type { get { return GameSceneType.ExitGame; } }
 
-    public override void EnterScene()
+    protected override void OnEnterScene(GameSceneParam param)
     {
-        EnterComplete();
+        EnterComplete(null);
     }
 
-    public override void ExitScene()
+    protected override void OnExitScene(GameSceneParam param)
     {
-        ExitComplete();
+        ExitComplete(null);
     }
 }

@@ -31,12 +31,6 @@ public class UIRoot : MonoBehaviour
     GraphicRaycaster m_GraphicRaycaster;
 
     /// <summary>
-    /// 基础的分辨率
-    /// </summary>
-    static Vector2 baseResolution = new Vector2(1536f, 2048f);
-    static Vector2 baseResolutionWithWidth = new Vector2(1152f, 2048f);
-
-    /// <summary>
     /// 屏幕的分辨率
     /// </summary>
     public static Vector2 screenResolution { get { return m_ScreenResolution; } }

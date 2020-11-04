@@ -1,24 +1,41 @@
-﻿using UnityEngine;
-using UnityEditor;
-using Untility;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Collections;
+using Untility;
+using UnityEngine;
 
 /// <summary>
 /// 关卡的通用配置
 /// </summary>
-public class LevelManager : Singleton<LevelManager>, ISimpleInitManager
+public class LevelManager : MonoBehaviour, ISimpleInitManager
 {
-
+    public static LevelManager instance
+    {
+        get
+        {
+            if (m_Instance == null)
+            {
+                m_Instance = GameObject.FindObjectOfType<LevelManager>();
+                if (m_Instance == null)
+                {
+                    m_Instance = new GameObject("LevelManager").AddComponent<LevelManager>();
+                }
+            }
+            return m_Instance;
+        }
+    }
+    static LevelManager m_Instance;
 
     Dictionary<int, JLevelConfig> m_LevelConfigs;
 
     public void Initialize()
     {
-        m_LevelConfigs = LoadJsonObject.CreateObjectFromResource<Dictionary<int, JLevelConfig>>("Config/LevelConfig/LevelConfig");
-        foreach (int index in m_LevelConfigs.Keys)
+        m_LevelConfigs = new Dictionary<int, JLevelConfig>();
+        var e = LoadJsonObject.CreateObjectFromResource<Dictionary<int, string>>("Config/Level/LevelConfig").GetEnumerator();
+        while (e.MoveNext())
         {
-            m_LevelConfigs[index].index = index;
+            JLevelConfig levelConfig = LoadJsonObject.CreateObjectFromResource<JLevelConfig>(e.Current.Value);
+            levelConfig.index = e.Current.Key;
+            m_LevelConfigs.Add(e.Current.Key, levelConfig);
         }
     }
 
@@ -39,7 +56,7 @@ public class LevelManager : Singleton<LevelManager>, ISimpleInitManager
         {
             if (level != null)
             {
-                return level.area;
+                return level.curArea;
             }
             return null;
         }
@@ -51,24 +68,64 @@ public class LevelManager : Singleton<LevelManager>, ISimpleInitManager
         {
             if (area != null)
             {
-                return area.room;
+                return area.curRoom;
             }
             return null;
         }
     }
 
-    List<LevelInstance> m_Levels = new List<LevelInstance>();
-
     LevelInstance m_CurLevel;
 
-    public LevelData GenerateLevelData(int levelIndex, int seed)
+    List<LevelInstance> m_Levels = new List<LevelInstance>();
+
+    public LevelInstance GetLevelInstance(int levelIndex)
+    {
+        foreach (LevelInstance level in m_Levels)
+        {
+            if (level.levelIndex == levelIndex)
+            {
+                return level;
+            }
+        }
+        return null;
+    }
+
+    #region 创建
+    public bool BuildLevel(int levelIndex, int seed)
+    {
+        if (GetLevelInstance(levelIndex) != null)
+        {
+            Debug.LogError("关卡 " + levelIndex + "已在存在");
+            return false;
+        }
+        StartCoroutine(DoBuildLevel(levelIndex, seed));
+        return true;
+    }
+
+    public void DestroyLevel(int levelIndex, ExitLevelType type)
+    {
+        LevelInstance level = GetLevelInstance(levelIndex);
+        if (level != null)
+        {
+            StartCoroutine(DoDestroyLevel(level, type));
+        }
+    }
+
+    IEnumerator DoBuildLevel(int levelIndex, int seed)
+    {
+        LevelInstance level = GenerateLevel(levelIndex, seed);
+        m_Levels.Add(level);
+        yield return level.BuildLevel();
+    }
+
+    LevelData GenerateLevelData(int levelIndex, int seed)
     {
         JLevelConfig config = GetLevelConfig(levelIndex);
         System.Random random = new System.Random(seed);
         return LevelData.Create(config, random);
     }
 
-    public LevelInstance GenerateLevel(int levelIndex, int seed)
+    LevelInstance GenerateLevel(int levelIndex, int seed)
     {
         LevelData levelData = GenerateLevelData(levelIndex, seed);
         if (levelData == null)
@@ -77,42 +134,72 @@ public class LevelManager : Singleton<LevelManager>, ISimpleInitManager
         }
         System.Random random = new System.Random(seed);
         LevelInstance level = LevelInstance.Create(levelData, random);
-        if (level != null)
-        {
-            m_Levels.Add(level);
-        }
         return level;
     }
 
-    public IEnumerator DestroyLevel(LevelInstance level, DestroyLevelType type)
+    IEnumerator DoDestroyLevel(LevelInstance level, ExitLevelType type)
     {
-        if (level != null && m_Levels.Contains(level))
+        if (level != null)
         {
-            if (level == m_CurLevel)
+            if (!level.isEnterLevel)
             {
-                yield return ExitLevel(type);
+                m_Levels.Remove(level);
+                yield return level.DestroyLevel(this, type);
             }
-            yield return level.DestroyLevel(this, type);
-            m_Levels.Remove(level);
+            else
+            {
+                Debug.LogError("关卡还没有退出，不能直接销毁");
+            }
         }
     }
+    #endregion
 
-    public IEnumerator EnterLevel(LevelInstance level)
+    #region 进出入
+
+    public bool EnterLevel(int levelIndex)
     {
-        if (level != null && m_CurLevel != level)
+        LevelInstance level = GetLevelInstance(levelIndex);
+        if (level != null)
         {
-            yield return ExitLevel(DestroyLevelType.NextArea);
-            m_CurLevel = level;
-            yield return m_CurLevel.EnterLevel(this);
+            StartCoroutine(DoEnterLevel(level));
+            return true;
+        }
+        else
+        {
+            Debug.LogError("还没有创建关卡 " + levelIndex);
+            return false;
         }
     }
 
-    public IEnumerator ExitLevel(DestroyLevelType type)
+    IEnumerator DoEnterLevel(LevelInstance level)
     {
         if (m_CurLevel != null)
         {
-            yield return m_CurLevel.ExitLevel(this, type);
-            m_CurLevel = null;
+            yield return m_CurLevel.ExitLevel(ExitLevelType.EnterNextLevel);
+        }
+        m_CurLevel = level;
+        yield return level.EnterLevel();
+    }
+
+
+    public void ExitLevel(ExitLevelType type)
+    {
+        if (m_CurLevel != null)
+        {
+            StartCoroutine(DoExitLevel(type));
         }
     }
+
+    IEnumerator DoExitLevel(ExitLevelType type)
+    {
+        yield return m_CurLevel.ExitLevel(type);
+        m_CurLevel = null;
+    }
+
+    #endregion
+
+
+
+
+    
 }

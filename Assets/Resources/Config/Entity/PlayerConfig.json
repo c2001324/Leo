@@ -1,7 +1,19 @@
 {
 	"default_player":
     {
-		"type":"ETrap",
+		"type":"EAvatar",
+		"name":"测试使用的默认玩家",
+		"entityModel":"EntityModels/Player/DefaultPlayer"
+	},
+	"default_monster_0":
+    {
+		"type":"EAvatar",
+		"name":"测试使用的默认玩家",
+		"entityModel":"EntityModels/Player/DefaultPlayer"
+	},
+	"default_monster_1":
+    {
+		"type":"EAvatar",
 		"name":"测试使用的默认玩家",
 		"entityModel":"EntityModels/Player/DefaultPlayer"
 	}

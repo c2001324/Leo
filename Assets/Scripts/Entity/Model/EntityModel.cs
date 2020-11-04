@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using System;
+using HighlightingSystem;
 
 /// <summary>
 /// 模型基础类
@@ -16,7 +17,7 @@ public class EntityModel : MonoBehaviour
         {
             m.gameObject.AddComponent<BoxCollider>();
         }
-        
+
         #region 添加HeadUI
         GameObject headUI = new GameObject("HeadUI");
         headUI.transform.parent = m.transform;
@@ -177,6 +178,8 @@ public class EntityModel : MonoBehaviour
 
     public ModelComponent modelComponent { get; private set; }
 
+    
+
     public Entity entity
     {
         get
@@ -194,10 +197,23 @@ public class EntityModel : MonoBehaviour
 
     bool m_HasInit = false;
 
+    public Highlighter highlighter { get; private set; }
+
+    public Animator GetAnimator()
+    {
+        return gameObject.GetComponent<Animator>();
+    }
+
     public void Intialize()
     {
         if (!m_HasInit)
         {
+            highlighter = gameObject.GetComponent<Highlighter>();
+            if (highlighter == null)
+            {
+                highlighter = gameObject.AddComponent<Highlighter>();
+                highlighter.overlay = true;
+            }
             slot.Initilaize();
             UpdateRendererObjects();
             OnIntialize();
@@ -208,7 +224,23 @@ public class EntityModel : MonoBehaviour
 
     protected virtual void OnIntialize()
     {
+        
+    }
 
+    public void SetHighlight(Color color)
+    {
+        highlighter.constantColor = color;
+        highlighter.constant = true;
+    }
+
+    public void SetHighlight(Relation relation)
+    {
+        SetHighlight(Untility.TextColor.GetHighlight(relation));
+    }
+
+    public void CloseHighlight()
+    {
+        highlighter.constant = false;
     }
 
     /// <summary>
@@ -234,21 +266,9 @@ public class EntityModel : MonoBehaviour
 
     protected virtual bool OnAttachToModelComponent(ModelComponent m)
     {
-        EntityFlagsChanged(m.entity.flags);
         return true;
     }
 
-    public void EntityFlagsChanged(EntityFlags flags)
-    {
-        if (Entity.CheckFlags(flags, EntityFlags.NoColliderWithEntity))
-        {
-            entity.gameObject.layer = LayerMask.NameToLayer(Layers.noColliderWithEntity);
-        }
-        else
-        {
-            entity.gameObject.layer = LayerMask.NameToLayer(Layers.entity);
-        }
-    }
 
     /// <summary>
     /// 由ModelComponent 调用
@@ -268,112 +288,34 @@ public class EntityModel : MonoBehaviour
 
     }
 
-}
-
-[System.Serializable]
-public class BodySlot
-{
-    //头顶的UI
-    public Transform headUI;
-    //头部
-    public Transform head;
-    //左手
-    public Transform leftHand;
-    //右手
-    public Transform rightHand;
-    //中心腰部
-    public Transform pelvis;
-    //左脚
-    public Transform leftFoot;
-    //右脚
-    public Transform rightFoot;
-    //击中的部位
-    public Transform hitLocation;
-    //位置
-    public Transform origin;
-    //射击的位置
-    public Transform projectile;
-
-    //武器Slot
-    public Transform wand;
-    public Transform twoHandSword;
-    public Transform sword_R;
-    public Transform shield;
-    public Transform bow;
-
-    Dictionary<BodySlotType, Transform> m_Slots = new Dictionary<BodySlotType, Transform>();
-
-    public void Initilaize()
+    void OnMouseEnter()
     {
-        m_Slots.Add(BodySlotType.HeadUI, headUI);
-        m_Slots.Add(BodySlotType.Head, head);
-        m_Slots.Add(BodySlotType.LeftHand, leftHand);
-        m_Slots.Add(BodySlotType.RightHand, rightHand);
-        m_Slots.Add(BodySlotType.Pelvis, pelvis);
-        m_Slots.Add(BodySlotType.LeftFood, leftFoot);
-        m_Slots.Add(BodySlotType.RightFoor, rightFoot);
-        m_Slots.Add(BodySlotType.Hit, hitLocation);
-        m_Slots.Add(BodySlotType.Origin, origin);
-        m_Slots.Add(BodySlotType.Projectile, projectile);
-
-        //保证projectile的高度统一
-        if (projectile != null)
+        if (!InputManager.instance.IsOverlapUI() && modelComponent != null)
         {
-            projectile.position = new Vector3(projectile.position.x, 1f, projectile.position.z);
+            modelComponent.Select(EntityModelSelectType.FromModel);
         }
     }
 
-    public Transform[] GetWeaponSlot(WeaponType type)
+    void OnMouseExit()
     {
-        switch (type)
+        if (!InputManager.instance.IsOverlapUI() && modelComponent != null)
         {
-            case WeaponType.TwoHandSword:
-                return new Transform[] { twoHandSword };
-            case WeaponType.SwordShield:
-                return new Transform[] { sword_R, shield };
-            case WeaponType.Bow:
-                return new Transform[] { bow };
-            default:
-                return new Transform[] { wand };
+            modelComponent.UnSelect(EntityModelSelectType.FromModel);
         }
     }
 
-    public static bool CheckBodySlotType(BodySlotType source, BodySlotType target)
+    void OnMouseOver()
     {
-        return (source & target) == target;
-    }
-
-    public Transform GetBodySlot(BodySlotType type)
-    {
-        return m_Slots[type];
-    }
-
-    public Transform[] GetBodySlots(BodySlotType type)
-    {
-        List<Transform> list = new List<Transform>();
-        foreach (BodySlotType targetType in Enum.GetValues(typeof(BodySlot)))
+        if (!InputManager.instance.IsOverlapUI() && modelComponent != null)
         {
-            if (CheckBodySlotType(type, targetType) && m_Slots[targetType] != null)
+            if (Input.GetMouseButtonUp(0))
             {
-                list.Add(m_Slots[targetType]);
+                modelComponent.LeftClick(EntityModelSelectType.FromModel);
+            }
+            else if (Input.GetMouseButtonUp(1))
+            {
+                modelComponent.RightClick(EntityModelSelectType.FromModel);
             }
         }
-        return list.ToArray();
     }
-}
-
-[Flags]
-public enum BodySlotType
-{
-    None = 0,
-    HeadUI = 1 << 1,
-    Head = 1 << 2,
-    LeftHand = 1 << 3,
-    RightHand = 1 << 4,
-    Pelvis = 1 << 5,
-    LeftFood = 1 << 6,
-    RightFoor = 1 << 7,
-    Hit = 1 << 8,
-    Origin = 1 << 9,
-    Projectile = 1 << 10,
 }

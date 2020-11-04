@@ -34,7 +34,24 @@ namespace Untility
         static public Color B_Color = new Color(150 / 255f, 222f / 255f, 255f / 255f);
         static public Color A_Color = new Color(255f / 255f, 164 / 255f, 254f / 255f);
 
-       
+        public static Color enemyHighlight = Color.red;
+        public static Color teamateHighlight = Color.blue;
+
+        public static Color GetHighlight(Relation relation)
+        {
+            if (relation == Relation.Enemy)
+            {
+                return enemyHighlight;
+            }
+            else if (relation == Relation.Self || relation == Relation.Teammate)
+            {
+                return teamateHighlight;
+            }
+            else
+            {
+                return Color.white;
+            }
+        }
     }
 }
 

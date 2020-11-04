@@ -64,6 +64,7 @@ public enum EntityType
     Store = 1 << 6,
     Trap = 1 << 7,
     Unit = 1 << 8,
+    Avatar = 1 << 9,
     All = 1 << 32,
 }
 

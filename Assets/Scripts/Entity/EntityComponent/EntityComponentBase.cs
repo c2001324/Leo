@@ -20,7 +20,6 @@ public class EntityComponentBase : MonoBehaviour, IComponent
         this.entity = entity;
         if (OnInitialize(entity))
         {
-            enabled = false;
             return true;
         }
         else

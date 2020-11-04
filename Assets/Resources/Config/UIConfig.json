@@ -17,5 +17,23 @@
         "prefab":"UI/UITitleWnd",
         "layer":1,
         "hasMessage":true
+    },
+    {
+        "name":"UICombatMenuWnd",
+        "prefab":"UI/UICombatMenuWnd",
+        "layer":-50,
+        "hasMessage":true
+    },
+    {
+        "name":"UICombatMainWnd",
+        "prefab":"UI/UICombatMainWnd",
+        "layer":10,
+        "hasMessage":false
+    },
+    {
+        "name":"UIHeadWnd",
+        "prefab":"UI/UIHeadWnd",
+        "layer":11,
+        "hasMessage":false
     }
 ]

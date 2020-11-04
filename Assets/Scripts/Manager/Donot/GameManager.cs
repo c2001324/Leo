@@ -156,31 +156,27 @@ public class GameManager : MonoBehaviour
         RegisterSyncManager(ConfigManager.instance, baseWeight);
         RegisterSyncManager(IconManager.instance, baseWeight);
         RegisterSyncManager(CheatCodeManager.instance, baseWeight);
+        RegisterSyncManager(RoomManager.instance, baseWeight);
     }
     #endregion
 
     #region Simple管理器
     void InitializeSimpleManager()
     {
+        InputManager.instance.Initialize();
         CustomTextManager.instance.Initialize();
         EntityManager.instance.Initialize();
         EntityModelManager.instance.Initialize();
+        LevelManager.instance.Initialize();
+        TurnBaseManager.instance.Initialize();
+        PlayerManager.instance.Initialize();
+        CameraManager.instance.Initialize();
     }
     #endregion
 
     private void Update()
     {
-        if (Input.GetKeyUp(KeyCode.BackQuote))
-        {
-            if (UIConsoleWnd.instance.isShow)
-            {
-                UIManager.instance.CloseUI<UIConsoleWnd>();
-            }
-            else
-            {
-                UIManager.instance.OpenUI<UIConsoleWnd>(false);
-            }
-        }
+        InputManager.instance.Update();
     }
 
     private void LateUpdate()

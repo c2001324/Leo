@@ -41,8 +41,6 @@ public enum EntityFlags
     Blind = 1 << 2,              //致盲状态，攻击100%丢失
     Invulnerable = 1 << 3,          //无敌
     Invisible = 1 << 4,          //隐身状态
-    NoColliderWithEntity = 1 << 5,    //没有单位碰撞状态
-    NoOverlapWithEntity = 1 << 6,   //不占位置
     CannotFind = 1 << 7,                 //不会被查找到
 
     BlockDisabled = 1 << 10,   //禁用伤害减免
@@ -127,6 +125,9 @@ public abstract class Entity : MonoBehaviour
         }
     }
 
+    public Vector2 position2D { get { return new Vector2(position.x, position.z); } }
+
+
     public virtual Quaternion rotation
     {
         get
@@ -168,10 +169,10 @@ public abstract class Entity : MonoBehaviour
     /// </summary>
     public ModelComponent modelComponent { get; private set; }
 
-    public Hexagon centerCell { get; private set; }
+    public HexCell centerCell { get; private set; }
 
-    public IEnumerable<Hexagon> cells { get { return m_Cells; } }
-    List<Hexagon> m_Cells = new List<Hexagon>();
+    public IEnumerable<HexCell> cells { get { return m_Cells; } }
+    List<HexCell> m_Cells = new List<HexCell>();
 
     #endregion
 
@@ -336,10 +337,6 @@ public abstract class Entity : MonoBehaviour
     {
         if (changedFlags != EntityFlags.None)
         {
-            if (entityModel != null)
-            {
-                entityModel.EntityFlagsChanged(flags);
-            }
             if (add)
             {
                 onAddFlags.Invoke(changedFlags);
@@ -396,8 +393,6 @@ public abstract class Entity : MonoBehaviour
     public bool Initialize(uint oid, string keyName, JEntityConfig config, EntityModel entityModel, HexagonsWithCenter cells, BaseParams param)
     {
         gameObject.layer = LayerMask.NameToLayer(Layers.entity);
-        transform.position = cells.center.transform.position;
-;
         this.oid = oid;
         this.keyName = keyName;
 
@@ -410,9 +405,7 @@ public abstract class Entity : MonoBehaviour
         if (OnInitialize(config, param) && OnCreateComponent())
         {
             CreateComponentComplete();
-            entityState = EntityState.Alive;
-            centerCell = cells.center;
-            m_Cells.AddRange(cells.allCells);
+            entityState = EntityState.PendingBorn;
             return true;
         }
         else
@@ -431,7 +424,7 @@ public abstract class Entity : MonoBehaviour
         if (entityState == EntityState.Alive)
         {
             Dead();
-            m_Cells.Clear();
+            RemoveCell();
             BeginDestroyComponent();
             OnBeginDestroy();
         }
@@ -455,12 +448,15 @@ public abstract class Entity : MonoBehaviour
     /// <summary>
     /// 出生
     /// </summary>
-    public void Born()
+    public void Born(HexagonsWithCenter cells)
     {
         if (entityState == EntityState.PendingBorn)
         {
+            SetCell(cells);
             entityState = EntityState.Alive;
+            GameEvent.EntityEvent.FireOnBeforeEntityBorn(this);
             OnBorn();
+            GameEvent.EntityEvent.FireOnEntityBorn(this);
         }
     }
 
@@ -472,7 +468,9 @@ public abstract class Entity : MonoBehaviour
         if (entityState == EntityState.Alive)
         {
             entityState = EntityState.Dead;
+            GameEvent.EntityEvent.FireOnBeforeEntityDead(this);
             OnDead();
+            GameEvent.EntityEvent.FireOnEntityDead(this);
         }
     }
 
@@ -483,8 +481,107 @@ public abstract class Entity : MonoBehaviour
         return true;
     }
 
+
     #endregion
 
+    #region cell
+    public bool HasCell(HexCell cell)
+    {
+        return m_Cells.Contains(cell);
+    }
+
+    public void SetCell(HexagonsWithCenter cells)
+    {
+        RemoveCell();
+        position = cells.center.entityStandPosition;
+        centerCell = cells.center;
+        m_Cells.AddRange(cells.allCells);
+        foreach (HexCell cell in cells.allCells)
+        {
+            cell.SetEntity(this);
+        }
+    }
+
+    public void RemoveCell()
+    {
+        foreach (HexCell cell in m_Cells)
+        {
+            cell.RemoveEntity();
+        }
+        m_Cells.Clear();
+        centerCell = null;
+    }
+
+    /// <summary>
+    /// 由HexCell回调
+    /// </summary>
+    /// <param name="cell"></param>
+    public void OnSelectCell(HexCell cell)
+    {
+        modelComponent.Select(EntityModelSelectType.FromCell);
+    }
+
+    /// <summary>
+    /// 由HexCell回调
+    /// </summary>
+    /// <param name="cell"></param>
+    public void OnUnselectCell(HexCell cell)
+    {
+        modelComponent.UnSelect(EntityModelSelectType.FromCell);
+    }
+
+    /// <summary>
+    /// 由HexCell回调
+    /// </summary>
+    /// <param name="cell"></param>
+    public void OnLeftClickCell(HexCell cell)
+    {
+        modelComponent.LeftClick(EntityModelSelectType.FromCell);
+    }
+
+    /// <summary>
+    /// 由HexCell回调
+    /// </summary>
+    /// <param name="cell"></param>
+    public void OnRightClickCell(HexCell cell)
+    {
+        modelComponent.RightClick(EntityModelSelectType.FromCell);
+    }
+    #endregion
+
+    #region modelComponent组件的回调消息
+    public void OnSelect(EntityModelSelectType type)
+    {
+        if (centerCell != null && type != EntityModelSelectType.FromCell)
+        {
+            centerCell.room.OnSelectEntity(this);
+        }
+    }
+
+    public void OnUnselect(EntityModelSelectType type)
+    {
+        if (centerCell != null && type != EntityModelSelectType.FromCell)
+        {
+            centerCell.room.OnUnselectEntity(this);
+        }
+    }
+
+    public void OnLeftClick(EntityModelSelectType type)
+    {
+        if (centerCell != null && type != EntityModelSelectType.FromCell)
+        {
+            centerCell.room.OnLeftClickEntity(this);
+        }
+    }
+
+    public void OnRightClick(EntityModelSelectType type)
+    {
+        if (centerCell != null && type != EntityModelSelectType.FromCell)
+        {
+            centerCell.room.OnRightClickEntity(this);
+        }
+    }
+    #endregion
 
     public void LookAt(Entity e)
     {

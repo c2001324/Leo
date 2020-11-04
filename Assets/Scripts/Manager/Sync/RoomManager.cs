@@ -2,6 +2,7 @@
 using System.IO;
 using UnityEngine;
 using Untility;
+using HexMap;
 
 public class RoomManager : Singleton<RoomManager>, ISyncInitManager
 {
@@ -11,8 +12,6 @@ public class RoomManager : Singleton<RoomManager>, ISyncInitManager
 #if UNITY_EDITOR
         RoomContainer.Initialize();
 #endif
-        LoadRoomModelConfig();
-        yield return new ManagerProgress(0.5f, "");
         LoadRoomContentConfig();
         yield return new ManagerProgress(1f, "");
     }
@@ -20,7 +19,7 @@ public class RoomManager : Singleton<RoomManager>, ISyncInitManager
     #region 房间内容
     void LoadRoomContentConfig()
     {
-        var e = LoadJsonObject.CreateObjectFromResource<Dictionary<string, JRoomContentConfig>>("Config/LevelConfig/RoomContentConfig").GetEnumerator();
+        var e = LoadJsonObject.CreateObjectFromResource<Dictionary<string, JRoomContentConfig>>("Config/Level/RoomContentConfig").GetEnumerator();
         while (e.MoveNext())
         {
             string name = e.Current.Key.ToLower();
@@ -117,92 +116,6 @@ public class RoomManager : Singleton<RoomManager>, ISyncInitManager
         RoomType.SupportRoom,
         RoomType.BackRoom
         };
-    #endregion
-
-
-    #region 房间模型
-    Dictionary<string, JRoomModelConfig> m_Configs;
-
-    string m_BasePath;
-
-    void LoadRoomModelConfig()
-    {
-        m_Configs = LoadJsonObject.CreateObjectFromResource<Dictionary<string, JRoomModelConfig>>("Config/LevelConfig/RoomModelConfig");
-        m_BasePath = Path.Combine(Application.streamingAssetsPath, "Map");
-    }
-
-    public JRoomModelConfig GetModelConfig(string name)
-    {
-        JRoomModelConfig config = null;
-        m_Configs.TryGetValue(name, out config);
-        return config;
-    }
-
-
-    public RoomModel LoadRoomModel(string name, List<string> excludeKeys)
-    {
-        JRoomModelConfig config = GetModelConfig(name);
-        if (config == null)
-        {
-            Debug.LogError("找不到 " + name);
-            return null;
-        }
-        else
-        {
-            return LoadRoomModel(config, excludeKeys);
-        }
-    }
-
-    RoomModel LoadRoomModel(JRoomModelConfig config, List<string> excludeKeys)
-    {
-        string path = config.path.Replace("\\", "/").ToLower();
-        if (config.isDirectory)
-        {
-            RoomModel model = null;
-            string fullPath = Path.Combine(m_BasePath, path);
-            AssetBundle ab = AssetBundle.LoadFromFile(fullPath);
-            string[] allNames = ab.GetAllAssetNames();
-            List<int> nameIndex = Untility.Tool.CreateRandomList(0, allNames.Length - 1);
-            foreach (int index in nameIndex)
-            {
-                string key = allNames[index].ToLower();
-                if (excludeKeys == null || !excludeKeys.Contains(key))
-                {
-                    model = InstanceRoomMode(ab.LoadAsset<GameObject>(allNames[index]), key);
-                    break;
-                }
-            }
-            ab.Unload(false);
-            return model;
-        }
-        else
-        {
-            int index = path.LastIndexOf('/');
-            string name = path.Remove(0, index + 1);
-            string fullPath = Path.Combine(m_BasePath, path.Remove(index));
-            AssetBundle ab = AssetBundle.LoadFromFile(fullPath);
-            GameObject prefab = ab.LoadAsset<GameObject>(name);
-            ab.Unload(false);
-            return InstanceRoomMode(prefab, path);
-        }
-    }
-
-    RoomModel InstanceRoomMode(GameObject prefab, string key)
-    {
-        GameObject newObj = GameObject.Instantiate<GameObject>(prefab);
-        newObj.name = prefab.name;
-        RoomModel roomModel = newObj.GetComponent<RoomModel>();
-        if (roomModel == null)
-        {
-            Debug.LogError(key + " 没有组件 RoomModel");
-            return null;
-        }
-        else
-        {
-            roomModel.Initialize(key);
-            return roomModel;
-        }
-    }
     #endregion
 
 }

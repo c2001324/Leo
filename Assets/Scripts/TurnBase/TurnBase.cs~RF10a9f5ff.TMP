@@ -1,0 +1,184 @@
+﻿using UnityEngine;
+using UnityEditor;
+using System.Collections.Generic;
+
+public class TurnBase
+{
+    List<CTurnBaseComponent> m_Entities = new List<CTurnBaseComponent>();
+
+    public enum State
+    {
+        Ready,
+        Playing,
+        Complete
+    }
+
+    public State state { get; private set; }
+
+    /// <summary>
+    /// 回合数
+    /// </summary>
+    public int turnCounter { get; private set; }
+
+    /// <summary>
+    /// 当前正在行动的Entity
+    /// </summary>
+    public CTurnBaseComponent curEntity { get; private set; }
+
+    public TurnBase(int turnCounter)
+    {
+        this.turnCounter = turnCounter;
+        state = State.Ready;
+        //添加现有的Entity
+        foreach (Entity entity in LevelManager.room.entities)
+        {
+            AddEntity(entity);
+        }
+        GameEvent.EntityEvent.onEntityBorn.AddListener(OnEntityBorn);
+        GameEvent.EntityEvent.onEntityDead.AddListener(OnEntityDead);
+    }
+
+    void OnEntityBorn(Entity entity)
+    {
+        AddEntity(entity);
+    }
+
+    void OnEntityDead(Entity entity)
+    {
+        RemoveEntity(entity, true);
+    }
+
+    /// <summary>
+    /// 开始回合
+    /// </summary>
+    public void Start()
+    {
+        if (state == State.Ready)
+        {
+            state = State.Playing;
+            GameEvent.TurnBaseEvent.FireOnTurnStart(this);
+            EntityTurnStart(GetNextEntity());
+        }
+    }
+
+    /// <summary>
+    /// 结束回合
+    /// </summary>
+    public void Complete()
+    {
+        if (state == State.Playing)
+        {
+            state = State.Complete;
+            GameEvent.TurnBaseEvent.FireOnTurnComplete(this);
+
+            if (m_Entities.Count > 0)
+            {
+                List<CTurnBaseComponent> tempList = new List<CTurnBaseComponent>(m_Entities);
+                foreach (CTurnBaseComponent t in tempList)
+                {
+                    RemoveEntity(t);
+                }
+            }
+            m_Entities.Clear();
+            
+            curEntity = null;
+            GameEvent.EntityEvent.onEntityBorn.RemoveListener(OnEntityBorn);
+            GameEvent.EntityEvent.onEntityDead.RemoveListener(OnEntityDead);
+        }
+    }
+
+    /// <summary>
+    /// Entity开始执行
+    /// </summary>
+    /// <param name="target"></param>
+    void EntityTurnStart(CTurnBaseComponent target)
+    {
+        if (curEntity == null)
+        {
+            curEntity = target;
+            
+        }
+        else
+        {
+            Debug.LogError("当前有正在行动的Entity");
+        }
+    }
+
+    void NextEntityTurn()
+    {
+        CTurnBaseComponent target = GetNextEntity();
+        if (target == null)
+        {
+            Complete();
+        }
+        else
+        {
+            EntityTurnStart(target);
+        }
+    }
+
+    void OnEntityTurnComplete(CTurnBaseComponent target)
+    {
+        if (m_Entities.Remove(curEntity) && curEntity == target)
+        {
+            curEntity = null;
+            NextEntityTurn();
+        }
+    }
+
+    CTurnBaseComponent GetNextEntity()
+    {
+        if (m_Entities.Count > 0)
+        {
+            return m_Entities[0];
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    bool AddEntity(Entity entity)
+    {
+        CTurnBaseComponent t = entity.GetCComponent<CTurnBaseComponent>();
+        if (t != null && !m_Entities.Contains(t))
+        {
+            t.onTurnComplete.InsertListener(OnEntityTurnComplete);
+            t.onTurnBaseValueChanged.AddListener(OnEntityTurnBaseValueChanged);
+            UpdateEntitySort();
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    void RemoveEntity(Entity entity, bool updateEntitySort)
+    {
+        CTurnBaseComponent t = entity.GetCComponent<CTurnBaseComponent>();
+        if (t != null && m_Entities.Remove(t))
+        {
+            t.onTurnBaseValueChanged.RemoveListener(OnEntityTurnBaseValueChanged);
+            t.onTurnComplete.RemoveListener(OnEntityTurnComplete);
+            if (updateEntitySort)
+            {
+                UpdateEntitySort();
+            }
+        }
+    }
+
+    void OnEntityTurnBaseValueChanged(CTurnBaseComponent t)
+    {
+
+    }
+
+    /// <summary>
+    /// 更新Entity的行动顺序
+    /// </summary>
+    void UpdateEntitySort()
+    {
+
+    }
+
+}

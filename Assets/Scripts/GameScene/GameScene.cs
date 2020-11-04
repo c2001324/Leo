@@ -2,20 +2,34 @@
 {
     public abstract GameSceneType type { get; }
 
-    public abstract void EnterScene();
-
-    public abstract void ExitScene();
-
-    public delegate void GameSceneHandle(GameScene gameScene);
-
-    protected void EnterComplete()
+    public void EnterScene(GameSceneParam param)
     {
-        onEnterComplete.Invoke(this);
+        OnEnterScene(param);
     }
 
-    protected void ExitComplete()
+    public void ExitScene(GameSceneParam param)
     {
-        onExitComplete.Invoke(this);
+        OnExitScene(param);
+        //关闭共同的窗口
+        UIManager.instance.CloseUI<UICombatMenuWnd>();
+        UIManager.instance.CloseUI<UICombatMainWnd>();
+        UIManager.instance.CloseUI<UIHeadWnd>();
+    }
+
+    protected abstract void OnEnterScene(GameSceneParam param);
+
+    protected abstract void OnExitScene(GameSceneParam param);
+
+    public delegate void GameSceneHandle(GameScene gameScene, GameSceneParam param);
+
+    protected void EnterComplete(GameSceneParam param)
+    {
+        onEnterComplete.Invoke(this, param);
+    }
+
+    protected void ExitComplete(GameSceneParam param)
+    {
+        onExitComplete.Invoke(this, param);
     }
 
     public event GameSceneHandle onEnterComplete;
@@ -29,4 +43,11 @@ public enum GameSceneType
     PreCombat,  //战斗准备
     Combat,         //战斗中
     Practice            //练习
+}
+
+public class GameSceneParam
+{
+    public ExitLevelType exitLevelType;
+    public int enterLevelIndex;
+    public int seed;
 }

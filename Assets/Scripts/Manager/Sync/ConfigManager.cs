@@ -60,8 +60,9 @@ public class ConfigInstance
         public float maxMoveSpeed;       //最大的移动速度
         public float minMoveSpeed;    //最小的移动速度
         public float projectileY;        //射击的默认 Y 轴坐标
-        public float turnSpeed;        //转身速度
+        public float moveSpeed;        //移动速度
         public float strRestoreTime;   //体力回复时间
+
     }
 
 
